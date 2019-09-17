@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>fetch</title>
+</head>
+<body onload="req()">
+    <div id="info"></div>
+
+    <script>
+        function req() {
+            let params = {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'text/plain',
+                }
+            };
+            fetch('http://localhost:5000/api/name', params)
+                .then(async response => {
+                    document.getElementById('info').innerHTML = await response.text();
+                });
+        }
+    </script>
+</body>
+</html>
