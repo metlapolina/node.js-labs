@@ -2,7 +2,7 @@ var http=require('http');
 var url = require('url');
 var fs = require('fs');
 
-var fact = (n)=>{return(n==0?1:n*fact(n-1));}
+var fact = (n)=>{return(n<=1?1:n*fact(n-1));}
 
 function Fact(n,cb){
     this.fn=n;

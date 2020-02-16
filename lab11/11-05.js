@@ -28,7 +28,7 @@ function fib(n){
     return elems;
 }
 function fibn(n){
-    return n<2?n:fibn(n-1)+fibn(n-2);
+    return n<=1?n:fibn(n-1)+fibn(n-2);
 }
 
 function fact(n) {

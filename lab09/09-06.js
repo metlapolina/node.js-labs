@@ -14,7 +14,7 @@ formData.append(
     {knownLength: fs.statSync(__dirname + '/MyFile.txt').size}
 );
 
-service.post('/sixth', formData,{
+service.post('/sixth_seventh', formData,{
     headers: {
         ...formData.getHeaders(),
         "Content-Length": formData.getLengthSync()

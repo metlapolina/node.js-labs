@@ -1,4 +1,5 @@
 var nodemailer = require('nodemailer');
+
 module.exports = (from, to, message) => {
     let transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',

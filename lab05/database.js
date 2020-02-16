@@ -9,14 +9,10 @@ var db_data =[
     {id:5, name: 'Семенов С.М.', bday:'2000-01-05'}
 ];
 
-var count = 0;
-var comm = 0;
-
 function DB(){
-    this.select = ()=>{count++; return db_data;};
-    this.insert = (r)=>{count++; db_data.push(r);};
+    this.select = ()=>{return db_data;};
+    this.insert = (r)=>{db_data.push(r);};
     this.update = (r)=>{
-        count++;
         var index = db_data.findIndex(function(item, i){
             return item.id == r.id;
         });
@@ -29,7 +25,6 @@ function DB(){
             return 'not found';
     }
     this.delete = (id)=>{
-        count++;
         var index = db_data.findIndex(function(item, i){
             return item.id === id;
         });
@@ -39,14 +34,7 @@ function DB(){
             return 'not found';
     }
     this.commit = ()=>{
-        comm++;
         console.log('commit');
-    }
-    this.getStatistics = (date)=>{
-        var stat =[
-            {start:date, finish:(new Date()).toJSON(), request:count, commit:comm}
-        ];
-        return stat;
     }
 }
 

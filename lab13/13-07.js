@@ -8,8 +8,8 @@ let h = (n)=>{return (sock)=>{
     console.log(`CONNECTED ${n}: `+sock.remoteAddress + ':' + sock.remotePort);
     
     sock.on('data', (data)=>{
-        console.log(`DATA ${n}:` + data.readInt32LE());
-        sock.write(`ECHO ${n}:` + data.readInt32LE());
+        console.log(`DATA ${n}:` + data.toString());
+        sock.write(`ECHO ${n}:` + data);
     });
     
     sock.on('close', ()=>{

@@ -1,8 +1,7 @@
 var http = require('http');
-var query = require('querystring');
 
 let params =  JSON.stringify({
-    comment: "comment",
+    __comment: "comment",
     x: 1,
     y: 2,
     s: "message",

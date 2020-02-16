@@ -1,6 +1,6 @@
-const rpcWSS = require('rpc-websockets').Client;
+const rpcWSC = require('rpc-websockets').Client;
 
-const ws = new rpcWSS('ws://localhost:4000');
+const ws = new rpcWSC('ws://localhost:4000');
 ws.on('open', () => {
     ws.call('square', [3]).then((r)=>{ console.log('square(3) = ', r);});
     ws.call('square', [5,4]).then((r)=>{ console.log('square(5,4) = ', r);});

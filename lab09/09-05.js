@@ -1,5 +1,4 @@
 var http = require('http');
-var query = require('querystring');
 
 let params = '<request id="28"><x value="1"/><x value="2"/><x value="1"/><m value="a"/><m value="b"/></request>';
 

@@ -7,7 +7,7 @@ let k = 0;
 
 let server = net.createServer((sock)=>{
     let sum = 0;
-    let clientId = k++;
+    let clientId = ++k;
     console.log(`Client ${clientId} CONNECTED`);
     
     sock.on('data', (data)=>{
@@ -23,11 +23,11 @@ let server = net.createServer((sock)=>{
     }, 5000);
     
     sock.on('close', ()=>{
-        console.log('Server CLOSED: '+ sock.remoteAddress+' '+sock.remotePort);
+        console.log('Server CLOSED: '+ clientId);
         clearInterval(timerId);
     });
     sock.on('error', ()=>{
-        console.log('Server ERROR: '+ sock.remoteAddress+' '+sock.remotePort);
+        console.log('Server ERROR: '+ clientId);
     });
 });
 

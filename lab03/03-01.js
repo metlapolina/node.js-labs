@@ -39,6 +39,7 @@ rl.on('line', (line) => {
       process.exit(0);
       break;
     default:
+      console.log(line);
       console.log('reg = ' +status+'-->'+status);
       break;
   }

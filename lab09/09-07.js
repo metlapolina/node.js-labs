@@ -14,7 +14,7 @@ formData.append(
     {knownLength: fs.statSync(__dirname + '/MyFile.png').size}
 );
 
-service.post('/seventh', formData,{
+service.post('/sixth_seventh', formData,{
     headers: {
         ...formData.getHeaders(),
         "Content-Length": formData.getLengthSync()

@@ -13,7 +13,10 @@
             function startWS(){
                 let socket = new WebSocket('ws:/localhost:4000/ws');
                 socket.onopen =()=>{
-                    messageInterval = setInterval(()=>{socket.send(++k);}, 3000);
+                    console.log('Socket opened');
+                    messageInterval = setInterval(()=>{
+                        socket.send(`10-01-client:${++k}`);
+                    }, 3000);
                     setTimeout(()=>{
                         clearInterval(messageInterval);
                         socket.close();
@@ -24,6 +27,7 @@
                     newMessage.innerText = e.data;
                     document.getElementById('mess').appendChild(newMessage);
                 };
+                socket.onclose = () => { console.log('Socket closed');}
                 socket.onerror = function(error){alert('Error '+ error.message);};
             };
         </script>

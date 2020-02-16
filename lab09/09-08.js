@@ -1,16 +1,16 @@
-const axios = require('axios');
-const fs = require('fs');
-const FormData = require('form-data');
-
-let service = axios.create({
-    baseURL: 'http://localhost:5000',
-    responseType: "application/json"
+var http=require('http');
+const fs=require('fs');
+const file=fs.createWriteStream('Client.txt');
+let options= {
+    host: 'localhost',
+    path: '/eighth',
+    port: 5000,
+    method:'GET'
+}
+const req = http.request(options,(res)=> {
+    res.pipe(file);
+}); 
+req.on('error', (e)=> {
+    console.log('http.request: error:', e.message);
 });
-
-service.get('/eighth')
-.then(res=>{
-    console.log('response: ', res.status);
-    console.log('statusMessage: ', res.statusText);
-    console.log('data: ' + JSON.stringify(res.data));
-    console.log('response headers: ', res.headers);
-});
+req.end();

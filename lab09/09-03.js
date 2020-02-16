@@ -1,5 +1,4 @@
 var http = require('http');
-var query = require('querystring');
 
 let params = JSON.stringify({x:3, y:4, s:'xxx'});
 console.log('params: ', params);

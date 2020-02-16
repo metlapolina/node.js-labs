@@ -1,7 +1,7 @@
 const async = require('async');
-const rpcWSS = require('rpc-websockets').Client;
+const rpcWSC = require('rpc-websockets').Client;
 
-const ws = new rpcWSS('ws://localhost:4000');
+const ws = new rpcWSC('ws://localhost:4000');
 let h = (x=ws)=>async.parallel({
     square_3: cb=>{ws.call('square', [3]).catch((e)=>cb(e,null)).then((r)=>{ cb(null,r)});},
     square_5_4: cb=>{ ws.call('square', [5,4]).catch((e)=>cb(e,null)).then((r)=>{ cb(null,r)});},

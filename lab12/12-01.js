@@ -1,155 +1,216 @@
+const http = require('http');
+const url = require('url');
 const rpcWSS = require('rpc-websockets').Server;
-const express = require('express');
-const bodyParser = require('body-parser');
 const fs = require('fs');
-const students = require('./StudentList');
 
-const server = new rpcWSS({port:4000, host:'localhost'});
-const app = express();
-app.use(bodyParser.json());
 
 const FILE_PATH = './StudentList.json';
 const BACKUP_DIR_PATH = './backup/';
 
+const server = new rpcWSS({port:4000, host:'localhost'});
 server.event('Changed!');
 
-app.get('/', (req, res)=>{
-    res.json(students);
-});
+function sendResponse(res, status, contentType, data) {
+    res.writeHead(status, { 'Content-type': contentType });
+    res.end(data);
+}
 
-app.get('/backup', (req, res) => {
-    fs.readdir(BACKUP_DIR_PATH, ((err, files) => {
-        let list = [];
-        files.forEach(async file => {
-            list.push({name:(BACKUP_DIR_PATH + file).toString()});
-        });
-        res.json(list);
-    }));
-});
+let isStudentList = (fn)=>{ 
+    let reg = new RegExp("[0-9]+_StudentList.json"); 
+    return reg.test(fn);
+}
 
-app.get('/:n', (req, res)=>{
-    let student = students.find(s => s.id == req.params.n);
-    if (student) {
-        res.json(student);
-    } else {
-        res.statusCode = 404;
-        res.json({error: 'No such student with provided id was found'});
-    }
-});
+http.createServer((req, res) => {
 
-app.post('/', (req, res)=>{
-    let {
-        id: id,
-        name: name,
-        birth: birth,
-        speciality: speciality
-    } = req.body;
-    if (students.find(s => s.id == id)) {
-        res.statusCode = 400;
-        res.json({error: 'Such student is already exists'});
-    } else {
-        let student = {id: id, name: name, birth: birth, speciality: speciality};
-        students.push(student);
-        fs.writeFile(FILE_PATH, JSON.stringify(students, null, '  '), () => {});
-        res.json(student);
-    }
-});
+    let pathName = url.parse(req.url).pathname;    
+    let splittedPath = pathName.split('/');
 
-app.put('/', (req, res)=>{
-    let {
-        id: id,
-        name: name,
-        birth: birth,
-        speciality: speciality
-    } = req.body;
-    let studentIndex = students.findIndex(s => s.id == id);
-    if (studentIndex != -1) {
-        let newStudent = {id: id, name: name, birth: birth, speciality: speciality};
-        let oldStudent = students[studentIndex];
-        Object.keys(oldStudent).forEach(field => {
-            if (newStudent[field] && oldStudent[field] != newStudent[field]) {
-                oldStudent[field] = newStudent[field];
+    if(req.method == 'GET'){        
+        if (pathName == '/') {
+            fs.readFile(FILE_PATH, (err, data) => {
+                if (err) {
+                    sendResponse(res, 400, 'text/plain', err.message);
+                } else {
+                    sendResponse(res, 200, 'application/json', data);
+                }
+            });
+        } 
+        else if (pathName == '/backup') {
+            fs.readdir(BACKUP_DIR_PATH, ((err, files) => {
+                sendResponse(res, 200, 'application/json', JSON.stringify(files));
+            }));
+        }   
+        else if (splittedPath.length > 1 && splittedPath[0] == '') {
+            let id = Number(splittedPath[1]);
+            if(!Number.isInteger(id)){
+                sendResponse(res, 400, 'text/plain', 'Arguments error');
+                return;
             }
-        });
-        fs.writeFile(FILE_PATH, JSON.stringify(students, null, '  '), () => {});
-        res.json(oldStudent);
-    } else {
-        res.statusCode = 401;
-        res.json({error: 'No such student with provided id was found'});
-    }
-});
-
-app.delete('/:n', (req, res) => {
-    let student = students.find(s => s.id == req.params.n);
-    if (student) {
-        students.splice(students.findIndex(s => s.id == req.params.n), 1);
-        fs.writeFile(FILE_PATH, JSON.stringify(students, null, '  '), () => {});
-        res.json(student);
-    } else {
-        res.statusCode = 404;
-        res.json({error: 'No such student with provided id was found'});
-    }
-});
-
-app.post('/backup', (req, res) => {
-    const date = new Date();
-    let backupFile = BACKUP_DIR_PATH
-        + date.getFullYear() + '-' + date.getMonth() + '-' + date.getDay() + '-'
-        + date.getHours() + '-' + date.getMinutes() + '-' + date.getSeconds() + '-'
-        + 'StudentList.json';
-    setTimeout(() => {
-        fs.copyFile(FILE_PATH, backupFile, e => {
-            if (e) {
-                res.statusCode = 500;
-                res.json({error: e.message});
-            }
-            res.end();
-        });
-    }, 2000);
-});
-
-app.delete('/backup/:date', (req, res) => {
-    fs.readdir(BACKUP_DIR_PATH, (e, files) => {
-        if (e) {
-            res.statusCode = 500;
-            res.json({error: e.message});
-            throw e;
-        }
-        let backupDate = req.params.date;
-        let year = '', month = '', day = '';
-        for (let i = 0; i < backupDate.length; i++) {
-            if (i < 4) {
-                year += backupDate.charAt(i);
-            } else if (i < 5) {
-                month += backupDate.charAt(i);
-            } else {
-                day += backupDate.charAt(i);
-            }
-        }
-        backupDate = new Date(Number(year), Number(month), Number(day));
-        files.forEach(file => {
-            let parms = file.split('-').splice(0, 6);
-            let fileDate = new Date(
-                Number(parms[0]),
-                Number(parms[1]),
-                Number(parms[2]),
-                Number(parms[3]),
-                Number(parms[4]),
-                Number(parms[5])
-            );
-            if (backupDate > fileDate) {
-                fs.unlink(BACKUP_DIR_PATH + file, e => {
-                    if (e) {
-                        res.statusCode = 500;
-                        res.body = JSON.stringify({error: e.message});
-                        throw e;
+            fs.readFile(FILE_PATH, (err, data) => {
+                if (err) {
+                    sendResponse(res, 400, 'text/plain', err.message);
+                } else {
+                    let dataObject = JSON.parse(data);
+                    for (const element in dataObject) {
+                        if (dataObject[element].id == id) {
+                            sendResponse(res, 200, 'application/json', JSON.stringify(dataObject[element]));
+                            return;
+                        }
                     }
-                })
+                    sendResponse(res, 400, 'text/plain', `No user with id ${id}`);
+                }
+            });
+        }
+    }
+
+    if(req.method == 'POST'){
+        if (pathName == '/') {
+            let body = '';
+            req.on('data', (chunk) => body += chunk);
+            req.on('end', () => {
+                let dataObject = JSON.parse(body);
+                fs.readFile(FILE_PATH, (err, data) => {
+                    if (err) {
+                        sendResponse(res, 400, 'text/plain', err.message);
+                    } else {
+                        let fileObject = JSON.parse(data);
+                        let found = false;
+                        fileObject.forEach(element => {
+                            if (element.id == dataObject.id) {
+                                found = true;
+                                return;
+                            }
+                        });
+                        if (found) {
+                            sendResponse(res, 400, 'text/plain', 'Student already exists');
+                        } else {
+                            fileObject.push(dataObject);
+                            fs.writeFile(FILE_PATH, JSON.stringify(fileObject), (err) => {
+                                if (err) {
+                                    sendResponse(res, 400, 'text/plain', err.message);
+                                } else {
+                                    sendResponse(res, 200, 'application/json', JSON.stringify(dataObject));
+                                }
+                                server.emit('Changed!', __dirname, 'Add data');
+                            });
+                        }
+                    }
+                });
+            });
+        }
+        else if (pathName == '/backup') {
+            let currentDate = new Date();
+            let fname = '';
+            fname+=currentDate.getFullYear();
+            fname+= '0'+(currentDate.getMonth() + 1);
+            fname+=currentDate.getDate();
+            fname+=currentDate.getHours();
+            fname+=currentDate.getMinutes();
+            fname+='_StudentList.json';
+            setTimeout(() => {
+                fs.copyFile(FILE_PATH, BACKUP_DIR_PATH + fname, (err) => {
+                    if (err) {
+                        sendResponse(res, 500, 'text/plain', err.message);
+                    } else {
+                        sendResponse(res, 200, 'text/plain', `Created: ${fname}`);
+                    }
+                });
+            }, 2000);
+        }
+    }
+
+    if(req.method == 'PUT'){
+        if (pathName == '/') {
+            let body = '';
+            req.on('data', (chunk) => body += chunk);
+            req.on('end', () => {
+                let dataObject = JSON.parse(body);
+                fs.readFile(FILE_PATH, (err, data) => {
+                    if (err) {
+                        sendResponse(res, 400, 'text/plain', err.message);
+                    } else {
+                        let fileObject = JSON.parse(data);
+                        let found = false;
+                        for (i in fileObject) {
+                            if (fileObject[i].id == dataObject.id) {
+                                found = true;
+                                fileObject[i].id = dataObject.id;
+                                fileObject[i].name = dataObject.name;
+                                fileObject[i].bday = dataObject.bday;
+                                fileObject[i].speciality = dataObject.speciality;
+                                fs.writeFile(FILE_PATH, JSON.stringify(fileObject), (err) => {
+                                    if (err) {
+                                        sendResponse(res, 400, 'text/plain', err.message);
+                                    } else {
+                                        sendResponse(res, 200, 'application/json', JSON.stringify(dataObject));
+                                    }
+                                    server.emit('Changed!', __dirname, 'Edit data');
+                                });
+                                break;
+                            }
+                        };
+                        if (!found) {
+                            sendResponse(res, 400, 'text/plain', 'Student not exists');
+                        }
+                    }
+                });
+            });
+        }
+    }
+
+    if(req.method == 'DELETE'){
+        if(url.parse(req.url).pathname.search('\/backup\/[1-9]+')!=(-1))
+        {
+            let p = url.parse(req.url,true);
+            let r =decodeURI(p.pathname).split('/');
+            let x=r[2];
+            fs.readdirSync('./backup/').map(fileName => {
+                if(isStudentList(fileName))
+                {
+                    let result=fileName.split('_')[0];
+                    if(result>x)
+                    {
+                        fs.unlink("./backup/"+fileName,(e)=>
+                        {
+                            if(e) console.log("Ошибка: ",e);
+                        })
+                    }
+                }
+            });
+            res.end("Удаление завершено");
+        }
+        else if (splittedPath.length > 1 && splittedPath[0] == '') {
+            let pickedIdx = parseInt(splittedPath[1]);
+            if (isNaN(pickedIdx)) {
+                sendResponse(res, 400, 'text/plain', 'Wrong argument');
+                return;
             }
-        });
-        res.end();
-    });
-});
+            fs.readFile(FILE_PATH, (err, data) => {
+                if (err) {
+                    sendResponse(res, 500, 'text/plain', err.message);
+                    return;
+                }
+                let fileObject = JSON.parse(data);
+                for (i in fileObject) {
+                    if (fileObject[i].id == pickedIdx) {
+                        sendResponse(res, 200, 'application/json', JSON.stringify(fileObject[i]));
+                        fileObject.splice(i, 1);
+                        fs.writeFile(FILE_PATH, JSON.stringify(fileObject), (err) => {
+                            server.emit('Changed!', __dirname, 'Delete data');
+                            if (err)
+                                console.log('write file error');
+                        });
+                        return;
+                    }
+                }
+                sendResponse(res, 400, 'text/plain', 'Invalid id');
+            });
+        }
+    }
+
+}).listen(5000);
+console.log('Server running at http://localhost:5000/');
+
 
 try{
     fs.watch(BACKUP_DIR_PATH, (event, f)=>{
@@ -162,6 +223,4 @@ catch(e){
     console.log('catch e = ', e.code);
 }
 
-app.listen({port:5000, host:'localhost'}, ()=>{
-    console.log('Server running at http://localhost:5000/');
-})
+

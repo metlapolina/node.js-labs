@@ -1,66 +1,111 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const xmlBodyParser = require('express-xml-bodyparser');
-const fileUpload = require('express-fileupload');
+var http = require('http');
+let url = require('url');
+let fs = require('fs');
+let parseString = require('xml2js').parseString;
+let mp=require('multiparty');
 
-var app = express();
 
-app.use(fileUpload({createParentPath: true}));
-app.use(xmlBodyParser({}));
-app.use(bodyParser.json());
+let server = http.createServer((request, response)=>{
+    let parsedUrl = url.parse(request.url, true);
 
-app.listen(5000);
+    if (parsedUrl.pathname === '/') {
+        response.statusCode = '201';
+        response.end("first task of lab09");
+    } 
+    else if (parsedUrl.pathname === '/second') {
+        response.end("Second task of lab09. Params: "+parsedUrl.query.x+", "+parsedUrl.query.y);
+    } 
+    else if (parsedUrl.pathname === '/third') {
+        let data = '';
+        request.on('data', (chunk) => {
+            data += chunk;
+        });
+        request.on('end', () => {
+            data = JSON.parse(data);
+            response.writeHead(200, {'Content-type': 'application/json; charset=utf-8'});
+            response.end("Third task of lab09. Params: "+data.x+", "+data.y+", "+data.s);
+        });
+    } 
+    else if (parsedUrl.pathname === '/fourth') {
+        let data = '';
+        request.on('data', (chunk) => {
+            data += chunk;
+        });
+        request.on('end', () => {
+            data = JSON.parse(data);
+            response.writeHead(200, {'Content-type': 'application/json; charset=utf-8'});
+            let comment = 'Ответ.' + data.__comment;
+            let resp = {};
+            resp.__comment = comment;
+            resp.x_plus_y = data.x + data.y;
+            resp.Concatenation_s_o = data.s + ': '+data.o.surname + ', ' + data.o.name;
+            resp.Length_m = data.m.length;
+            response.end(JSON.stringify(resp));
+        });
+    } 
+    else if (parsedUrl.pathname === '/fifth') {
+        let data = '';
+        request.on('data', (chunk) => {
+            data += chunk;
+        });
+        request.on('end', () => {
+            parseString(data, function(err, result) {
+                response.writeHead(200, {'Content-type': 'application/xml'});
+                let id = result.request.$.id;
+                let sum = 0;
+                let concat = '';
+                result.request.x.forEach((p) => {
+                    sum += parseInt(p.$.value);
+                });
+                result.request.m.forEach((p) => {
+                    concat += p.$.value;
+                });
+
+                let responseText = `<response id="33" request="${id}"><sum element="x" result="${sum}"/><concat element="m" result="${concat}"/></response>`;
+                response.end(responseText);
+            });
+        });
+    } 
+    else if (parsedUrl.pathname === '/sixth_seventh') {
+        let result='';
+		let form =new mp.Form({uploadDir:'./'});
+		form.on('field',(name,value)=>{
+			console.log('------------field-------------');
+			console.log(name,value);
+			result+=`<br/>---${name}= ${value}`;
+		});
+		form.on('file', (name, file)=>{
+			console.log('-----file ------------');
+			console.log(name,file);
+			result+=`<br/>---${name}= ${file.originalFilename}: ${file.path}`;
+		});
+		form.on('error',(err)=> {
+			console.log('------err--------------');
+			console.log('err =',err);
+			response.writeHead(200, {'Content-Type':'text/html;charset=utf-8'});
+			response.write('<h1>Form/error</h1>');
+			response.end()
+		});
+		form.on('close',()=>{
+			console.log('-----------close----------');
+			response.writeHead(200, {'Content-Type':'text/html;charset=utf-8'});
+			response.write('<h1>Form</h1>');
+			response.end(result);
+		})
+        form.parse(request);
+    } 
+    else if (parsedUrl.pathname === '/eighth') {
+        let path = __dirname+'/MyFile.txt';
+        fs.access(path, fs.constants.R_OK, err=>{
+            if(err){
+                response.statusCode=404;
+                response.end('Resourse not found!');
+            }else{
+                fs.createReadStream(path).pipe(response);
+            }
+        })
+    }
+
+}).listen(5000);
+
 console.log('Server running at http://localhost:5000/');
-
-app.get('/', (request, response) => {
-    response.statusCode = '201';
-    response.json({data: "first task of lab09"});
-});
-
-app.get('/second', (request, response) => {
-    response.json({data: "Second task of lab09. Params: "+request.query.x+", "+request.query.y});
-});
-
-app.post('/third', (request, response) => {
-    response.json({data: "Third task of lab09. Params: "+request.body.x+", "+request.body.y+", "+request.body.s});
-});
-
-app.post('/fourth', (request, response) => {
-    let {
-        comment: comment,
-        x: x,
-        y: y,
-        s: s,
-        m: m,
-        o: o
-    } = request.body;
-    response.json({
-        __comment: 'Response. ' + comment,
-        x_plus_y: x + y,
-        concat_s_o: s + ': ' + o.surname + ', ' + o.name,
-        length_m: m.length
-    });
-});
-
-app.post('/fifth', (request, response) => {
-    let xml = request.body;
-    response.setHeader('Content-Type', 'text/xml');
-    let sum = 0;
-    let concat = '';
-    xml.request.x.forEach(x => sum += Number(x.$.value));
-    xml.request.m.forEach(m => concat += m.$.value);
-    let responseText = `<response id="33" request="${xml.request.$.id}"><sum element="x" result="${sum}"/><concat element="m" result="${concat}"/></response>`;
-    response.end(responseText);
-});
-
-app.post('/sixth', (request, response) => {
-    response.end(request.files.textFile.name);
-});
-
-app.post('/seventh', (request, response) => {
-    response.end(request.files.pngFile.name);
-});
-
-app.get('/eighth', (request, response) => {
-    response.sendFile(__dirname+'/MyFile.txt');
-});

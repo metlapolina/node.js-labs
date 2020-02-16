@@ -12,7 +12,7 @@
             const d = Date.now();
             for(var k=0;k<20;k++){
                 fetch(`http://localhost:5000/fact?k=${k}`,{
-                    method:'GET', mode:'no-cors',
+                    method:'GET',
                     headers:{'Content-Type':'application/json', 'Accept':'application/json'}
                 })
                 .then(response=>{return response.json();})
